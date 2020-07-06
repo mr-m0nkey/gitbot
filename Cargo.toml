@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 serenity = "0.8"
 dotenv = "0.15.0"
+rocket = "0.4.5"
