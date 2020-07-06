@@ -15,6 +15,9 @@ use serenity::framework::standard::{
 use std::thread;
 use std::time::Duration;
 
+mod request;
+
+
 #[group]
 #[commands(ping)]
 struct General;
@@ -26,8 +29,8 @@ struct Handler;
 impl EventHandler for Handler {}
 
 
-#[get("/")]
-fn index() -> &'static str {
+#[post("/")]
+fn index(request: request::GitHubEvent) -> &'static str {
     "Hello, world!"
 }
 
@@ -41,7 +44,7 @@ fn main() {
     let server_thread = thread::spawn(|| {
         let server = rocket::ignite()
             // .manage() TODO manage message queue
-            .mount("/", routes![index])
+            .mount("/webhook", routes![index])
             .launch();
     });
 
