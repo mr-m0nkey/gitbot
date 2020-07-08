@@ -1,13 +1,19 @@
-use rocket::{Data, Outcome};
 use rocket::data;
-use rocket::data::FromData;
+use rocket::data::FromDataSimple;
+use rocket::data::Transform;
+use rocket::data::Transformed;
 use rocket::http::Status;
 use rocket::request;
-use rocket::request::Request;
 use rocket::request::FromRequest;
+use rocket::request::Request;
+use rocket::{Data, Outcome};
 use std;
 use std::io::prelude::*;
 
+use crypto;
+use crypto::hmac::Hmac;
+use crypto::mac::Mac;
+use crypto::sha1::Sha1;
 
 const X_GITHUB_EVENT: &'static str = "X-GitHub-Event";
 
@@ -38,9 +44,76 @@ impl<'r, 'a> FromRequest<'r, 'a> for GitHubEvent {
             ISSUE_COMMENT_EVENT => GitHubEvent::IssueComment,
             STATUS_EVENT => GitHubEvent::Status,
             PUSH => GitHubEvent::Push,
-            _ => { return Outcome::Failure((Status::BadRequest, ())); }
+            _ => {
+                return Outcome::Failure((Status::BadRequest, ()));
+            }
         };
 
         Outcome::Success(event)
     }
+}
+
+const X_HUB_SIGNATURE: &'static str = "X-Hub-Signature";
+
+/// Data guard that validates integrity of the request body by comparing with a
+/// signature.
+#[derive(Debug, PartialEq)]
+pub struct SignedPayload(pub String);
+
+impl FromDataSimple for SignedPayload {
+    type Error = ();
+
+    fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
+        let keys = request.headers().get(X_HUB_SIGNATURE).collect::<Vec<_>>();
+        if keys.len() != 1 {
+            return Outcome::Failure((Status::BadRequest, ()));
+        }
+
+        let signature = keys[0];
+
+        let mut body = String::new();
+        if let Err(_) = data.open().read_to_string(&mut body) {
+            return Outcome::Failure((Status::InternalServerError, ()));
+        }
+
+        let secret = match std::env::var("GITHUB_WEBHOOK_SECRET") {
+            Ok(s) => s,
+            Err(_) => {
+                return Outcome::Failure((Status::InternalServerError, ()));
+            }
+        };
+
+        if is_valid_signature(&signature, &body, &secret) {
+            return Outcome::Failure((Status::BadRequest, ()));
+        }
+
+        Outcome::Success(SignedPayload(body))
+    }
+}
+
+fn is_valid_signature(signature: &str, body: &str, secret: &str) -> bool {
+    let digest = Sha1::new();
+    let mut hmac = Hmac::new(digest, secret.as_bytes());
+    hmac.input(body.as_bytes());
+    let expected_signature = hmac.result();
+
+    let parts = signature.splitn(2, '=').collect::<Vec<_>>();
+    let code = parts[1];
+
+    crypto::util::fixed_time_eq(
+        bytes_to_hex(expected_signature.code()).as_bytes(),
+        code.as_bytes(),
+    )
+}
+
+const CHARS: &'static [u8] = b"0123456789abcdef";
+
+fn bytes_to_hex(bytes: &[u8]) -> String {
+    let mut v = Vec::with_capacity(bytes.len() * 2);
+    for &byte in bytes {
+        v.push(CHARS[(byte >> 4) as usize]);
+        v.push(CHARS[(byte & 0xf) as usize]);
+    }
+
+    unsafe { String::from_utf8_unchecked(v) }
 }

@@ -6,6 +6,7 @@ use serenity::prelude::{Context, EventHandler};
 
 #[macro_use]
 extern crate rocket;
+extern crate crypto;
 
 use serenity::framework::standard::{
     macros::{command, group},
@@ -17,7 +18,6 @@ use std::time::Duration;
 
 mod request;
 
-
 #[group]
 #[commands(ping)]
 struct General;
@@ -28,18 +28,15 @@ struct Handler;
 
 impl EventHandler for Handler {}
 
-
-#[post("/")]
-fn index(request: request::GitHubEvent) -> &'static str {
+#[post("/", data = "<payload>")]
+fn index(request: request::GitHubEvent, payload: request::SignedPayload) -> &'static str {
     "Hello, world!"
 }
 
 fn main() {
     dotenv().ok();
 
-    // TODO create empty (thread safe) message queue
-
-
+    // TODO ceeate empty (thread safe) message queue
 
     let server_thread = thread::spawn(|| {
         let server = rocket::ignite()
@@ -67,7 +64,6 @@ fn main() {
 
     server_thread.join().unwrap();
     discord_thread.join().unwrap();
-
 }
 
 #[command]
