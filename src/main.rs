@@ -7,6 +7,7 @@ use serenity::prelude::{Context, EventHandler};
 #[macro_use]
 extern crate rocket;
 extern crate crypto;
+extern crate hex;
 
 use serenity::framework::standard::{
     macros::{command, group},
@@ -14,7 +15,6 @@ use serenity::framework::standard::{
 };
 
 use std::thread;
-use std::time::Duration;
 
 mod request;
 

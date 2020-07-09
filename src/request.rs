@@ -1,7 +1,6 @@
+use hex;
 use rocket::data;
 use rocket::data::FromDataSimple;
-use rocket::data::Transform;
-use rocket::data::Transformed;
 use rocket::http::Status;
 use rocket::request;
 use rocket::request::FromRequest;
@@ -101,19 +100,7 @@ fn is_valid_signature(signature: &str, body: &str, secret: &str) -> bool {
     let code = parts[1];
 
     crypto::util::fixed_time_eq(
-        bytes_to_hex(expected_signature.code()).as_bytes(),
+        hex::encode(expected_signature.code()).as_bytes(), //TODO learn how to convert bytes to hex manually to prevent lib overhead
         code.as_bytes(),
     )
-}
-
-const CHARS: &'static [u8] = b"0123456789abcdef";
-
-fn bytes_to_hex(bytes: &[u8]) -> String {
-    let mut v = Vec::with_capacity(bytes.len() * 2);
-    for &byte in bytes {
-        v.push(CHARS[(byte >> 4) as usize]);
-        v.push(CHARS[(byte & 0xf) as usize]);
-    }
-
-    unsafe { String::from_utf8_unchecked(v) }
 }
