@@ -3,11 +3,13 @@ use dotenv::dotenv;
 use serenity::client::Client;
 use serenity::model::channel::Message;
 use serenity::prelude::{Context, EventHandler};
+use request::GitHubEvent;
 
 #[macro_use]
 extern crate rocket;
 extern crate crypto;
 extern crate hex;
+extern crate serde_json as json;
 
 use serenity::framework::standard::{
     macros::{command, group},
@@ -29,8 +31,24 @@ struct Handler;
 impl EventHandler for Handler {}
 
 #[post("/", data = "<payload>")]
-fn index(request: request::GitHubEvent, payload: request::SignedPayload) -> &'static str {
-    "Hello, world!"
+fn index(event: GitHubEvent, payload: request::SignedPayload) {
+    let data = json::from_str::<json::Value>(&payload.0).unwrap();
+    match event {
+        GitHubEvent::Push => {
+            handle_push(data);
+        }
+
+        _ => {
+
+        }
+    }
+}
+
+fn handle_push(data: json::Value) {
+    let number_of_commits = data["commits"].as_array().unwrap().len();
+    let pusher = data["pusher"]["name"].as_str().unwrap();
+    let repository = data["repository"]["name"].as_str().unwrap();
+    println!("{} pushed {} commit(s) to {}", pusher, number_of_commits, repository);
 }
 
 fn main() {

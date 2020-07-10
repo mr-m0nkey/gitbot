@@ -37,8 +37,9 @@ impl<'r, 'a> FromRequest<'r, 'a> for GitHubEvent {
         if keys.len() != 1 {
             return Outcome::Failure((Status::BadRequest, ()));
         }
-
+        
         let event = match keys[0] {
+
             PULL_REQUEST_EVENT => GitHubEvent::PullRequest,
             ISSUE_COMMENT_EVENT => GitHubEvent::IssueComment,
             STATUS_EVENT => GitHubEvent::Status,
@@ -82,7 +83,7 @@ impl FromDataSimple for SignedPayload {
             }
         };
 
-        if is_valid_signature(&signature, &body, &secret) {
+        if !is_valid_signature(&signature, &body, &secret) {
             return Outcome::Failure((Status::BadRequest, ()));
         }
 
