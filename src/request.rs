@@ -35,6 +35,7 @@ impl<'r, 'a> FromRequest<'r, 'a> for GitHubEvent {
     fn from_request(request: &'r Request<'a>) -> request::Outcome<GitHubEvent, ()> {
         let keys = request.headers().get(X_GITHUB_EVENT).collect::<Vec<_>>();
         if keys.len() != 1 {
+            panic!("{}","aaa");
             return Outcome::Failure((Status::BadRequest, ()));
         }
 
@@ -44,6 +45,8 @@ impl<'r, 'a> FromRequest<'r, 'a> for GitHubEvent {
             STATUS_EVENT => GitHubEvent::Status,
             PUSH => GitHubEvent::Push,
             _ => {
+                panic!("{}","bbb");
+
                 return Outcome::Failure((Status::BadRequest, ()));
             }
         };
@@ -65,6 +68,8 @@ impl FromDataSimple for SignedPayload {
     fn from_data(request: &Request, data: Data) -> data::Outcome<Self, Self::Error> {
         let keys = request.headers().get(X_HUB_SIGNATURE).collect::<Vec<_>>();
         if keys.len() != 1 {
+            panic!("{}","fff");
+
             return Outcome::Failure((Status::BadRequest, ()));
         }
 
@@ -72,17 +77,23 @@ impl FromDataSimple for SignedPayload {
 
         let mut body = String::new();
         if let Err(_) = data.open().read_to_string(&mut body) {
+            panic!("{}","afvfraa");
+
             return Outcome::Failure((Status::InternalServerError, ()));
         }
 
         let secret = match std::env::var("GITHUB_WEBHOOK_SECRET") {
             Ok(s) => s,
             Err(_) => {
+                panic!("{}","rrr");
+
                 return Outcome::Failure((Status::InternalServerError, ()));
             }
         };
 
         if !is_valid_signature(&signature, &body, &secret) {
+            panic!("{}","aaadddd");
+
             return Outcome::Failure((Status::BadRequest, ()));
         }
 

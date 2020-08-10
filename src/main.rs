@@ -74,7 +74,6 @@ impl EventHandler for Handler {
         let mut scheduler = scheduler.write();
 
         scheduler.add_task_duration(Duration::milliseconds(time as i64), move |_| {
-            println!("fefefefefe");
             let http = http.clone();
 
             match queue.events.lock().unwrap().pop() {
